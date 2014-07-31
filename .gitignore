@@ -3,6 +3,6 @@
 build
 web-app.war
 test.db
-Launcher.class
+*.class
 *.log
 lib
