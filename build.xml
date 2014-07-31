@@ -1,0 +1,94 @@
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="note_book" default="compile">
+
+    <property name="dir.src" value="./src"/>
+
+    <property name="dir.static" value="./static"/>
+
+    <property name="dir.lib" value="./lib"/>
+
+    <property name="dir.build" value="./build"/>
+
+    <!--Read DB properties-->
+    <property file="./database.properties"/>
+
+    <property name="sql" value="./create_db.sql"/>
+
+
+
+    <target name="resolve" depends="mkdirs" description="--> retrieve dependencies with ivy">
+        <ivy:retrieve />
+    </target>
+
+    <!--Set up CLASSPATH which contains paths to compiled classes-->
+    <path id="class.path">
+        <fileset dir="${dir.lib}">
+            <include name="*.jar" />
+        </fileset>
+        <dirset dir="."/>
+    </path>
+
+    <!--<pathconvert property="classpathProp" refid="class.path"/>-->
+
+    <!--Delete compiled unpacked files-->
+    <target name="clean">
+        <delete dir="${dir.build}"/>
+    </target>
+
+    <!--Create build dir-->
+    <target name="mkdirs">
+        <mkdir dir="${dir.build}" />
+        <mkdir dir="${dir.lib}" />
+    </target>
+
+    <!--Compile source files *.java into *.class-->
+    <target name="compile" depends="mkdirs">
+        <!--Compile web-app files, exclude Jetty launcher code, debug=on which allow inlude debug info into classes -->
+        <javac srcdir="${dir.src}" destdir="${dir.build}" debug="on" excludes="Launcher.java">
+            <classpath refid="class.path" />
+        </javac>
+
+        <!--Compile launcher class for embedded Jetty-->
+        <javac srcdir="${dir.src}"
+               destdir=".">
+            <classpath refid="class.path" />
+            <include name="Launcher.java" />
+        </javac>
+    </target>
+
+    <!--Packing web-app into war archive-->
+    <target name="build.war" depends="compile">
+
+        <war destfile="web-app.war" webxml="${dir.src}/web.xml">
+            <fileset dir="${dir.static}/jsp"/>
+            <fileset dir="${dir.static}/js"/>
+            <fileset dir="${dir.static}/css"/>
+            <lib dir="${dir.lib}"/>
+            <classes dir="${dir.build}"/>
+        </war>
+
+    </target>
+
+    <!--Create DB. Read properties from file above. Read sql from file-->
+    <target name="createdb">
+
+        <sql
+                driver="${db.driver}"
+                url="${db.url}"
+                userid="${db.user}"
+                password="${db.password}"
+                src="${sql}"
+                onerror="continue"
+        >
+            <classpath refid="class.path" />
+        </sql>
+
+    </target>
+
+    <!--Run Jetty -->
+    <target name="run" depends="build.war">
+        <java classname="Launcher" classpathref="class.path" fork="true" />
+    </target>
+
+</project>
+
+
